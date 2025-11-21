@@ -1,0 +1,3 @@
+#!/usr/bin/env bash
+
+am start --user 0 -n org.mozilla.firefox/.App
