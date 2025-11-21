@@ -8,31 +8,26 @@ local config = {
 		title = "Applications",
 		title_pos = "center",
 	},
+	default_command = { "am", "start", "--user", "0", "-n" },
+	applications = {
+		{
+			name = "DeepSeek",
+			activity = "com.deepseek.chat/.MainActivity",
+		},
+		{
+			name = "FireFox",
+			activity = "org.mozilla.firefox/.App",
+		},
+		{
+			name = "Instagram",
+			activity = "com.instagram.android/.activity.MainTabActivity",
+		},
+		{
+			name = "YouTube",
+			activity = "com.google.android.youtube/.HomeActivity",
+		},
+	},
 }
-
-local function get_plugin_path()
-	local paths = {
-		-- lazy.nvim
-		vim.fn.stdpath("data") .. "/lazy/Openner/",
-		-- packer.nvim
-		vim.fn.stdpath("data") .. "/site/pack/packer/start/Openner/",
-		vim.fn.stdpath("data") .. "/site/pack/packer/opt/Openner/",
-	}
-
-	for _, path in ipairs(paths) do
-		if vim.fn.isdirectory(path) == 1 then
-			return path
-		end
-	end
-
-	for path in vim.gsplit(vim.o.runtimepath, ",", {}) do
-		if vim.fn.matchstr(path, "openner") ~= "" then
-			return path
-		end
-	end
-
-	return nil
-end
 
 function M.validate_config()
 	-- validate window dimensions
@@ -64,8 +59,14 @@ function M.validate_config()
 end
 
 function M.setup(user_config)
-	-- Safe merge with error handling
 	if user_config then
+		-- Manually merge the applications table
+		if user_config.applications then
+			for _, app in ipairs(user_config.applications) do
+				table.insert(config.applications, app)
+			end
+			user_config.applications = nil -- Prevent overwrite by tbl_deep_extend
+		end
 		config = vim.tbl_deep_extend("force", config, user_config)
 	end
 
@@ -74,34 +75,10 @@ function M.setup(user_config)
 end
 
 function M.open()
-	local applications = {}
-	local plugin_path = get_plugin_path()
-
-	if not plugin_path then
-		vim.notify("Could not find openner plugin path", vim.log.levels.ERROR)
-		return
-	end
-
-	local apps_path = plugin_path .. "lua/Openner/application/"
-
-	-- validate path exists
-	if vim.fn.isdirectory(apps_path) == 0 then
-		vim.notify("Applications directory not found: " .. apps_path, vim.log.levels.WARN)
-		return
-	end
-
-	local files = vim.fn.readdir(apps_path)
-	for _, file in ipairs(files) do
-		if file ~= "." and file ~= ".." then
-			table.insert(applications, {
-				name = file,
-				path = apps_path .. file,
-			})
-		end
-	end
+	local applications = config.applications
 
 	if #applications == 0 then
-		vim.notify("No applications found in " .. apps_path, vim.log.levels.WARN)
+		vim.notify("No applications found in config", vim.log.levels.WARN)
 		return
 	end
 
@@ -183,12 +160,8 @@ function M.select_application()
 	local index = tonumber(string.match(line, "(%d+):"))
 	if index and applications[index] then
 		local app = applications[index]
-
-		-- Validate if file exists and is executable
-		if vim.fn.executable(app.path) == 0 then
-			vim.notify("Application not executable: " .. app.path, vim.log.levels.ERROR)
-			return
-		end
+		local command_parts = app.command or config.default_command
+		local command_to_run = table.concat(command_parts, " ") .. " " .. app.activity
 
 		vim.notify("Opening: " .. app.name, vim.log.levels.INFO)
 
@@ -203,7 +176,7 @@ function M.select_application()
 			end,
 		}
 
-		vim.fn.jobstart("bash " .. vim.fn.shellescape(app.path), job_opts)
+		vim.fn.jobstart(command_to_run, job_opts)
 		vim.api.nvim_win_close(win, true)
 	else
 		vim.notify("Invalid selection", vim.log.levels.ERROR)
