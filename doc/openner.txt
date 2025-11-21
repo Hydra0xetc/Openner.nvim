@@ -1,0 +1,88 @@
+*openner.txt*      For opening Android applications from Neovim
+
+==============================================================================
+CONTENTS                                                      *openner-contents*
+
+  1. Introduction...........................................|openner-introduction|
+  2. Usage......................................................|openner-usage|
+  3. Configuration......................................|openner-configuration|
+  4. API..........................................................|openner-api|
+
+==============================================================================
+INTRODUCTION                                              *openner-introduction*
+
+Openner.nvim is a simple plugin for Neovim that allows you to open Android
+applications directly from your editor. It's particularly useful for developers
+working with Termux.
+
+==============================================================================
+USAGE                                                             *openner-usage*
+
+The main command to open the application selection window is:
+>
+  :Openner
+<
+This will open a floating window listing all configured and active applications.
+You can select an application by moving the cursor and pressing <Enter>.
+
+==============================================================================
+CONFIGURATION                                           *openner-configuration*
+
+You can configure the plugin by calling the `setup` function.
+
+Example:
+>
+  require("Openner").setup({
+      default_command = { "am", "start", "--user", "0", "-n" }, -- default command to open a app
+      applications = {
+          Reddit = { -- open Reddit web
+              name = "Reddit Web",
+              command = { "termux-open-url" }, -- usage this command instead using default_command
+              activity = "https://www.reddit.com/r/termux",
+          },
+          Youtube = {
+              activated = false, -- disable default YouTube aplication
+          }
+      },
+      window = {
+                  width = 50,
+                  height = 10,
+          border = "rounded", -- single, double, rounded, none, shadow, solid
+          title = "Applications",
+          title_pos = "center", -- left, right, center
+      },
+  })
+<
+
+See |openner-options| for all available options.
+
+------------------------------------------------------------------------------
+OPTIONS                                                       *openner-options*
+
+`config.window`
+  Type: `table`
+  Configuration for the floating window. Supports `width`, `height`, `border`,
+  `title`, `title_pos`.
+
+`config.applications`
+  Type: `table`
+  A dictionary of applications you want to open. The key is the application
+  name, and the value is a table with its configuration.
+
+==============================================================================
+API                                                                 *openner-api*
+
+Openner.nvim provides the following Lua functions:
+
+`require("Openner").open()`
+  Opens the application selection window.
+
+`require("Openner").open_single_app(app_name)`
+  Directly opens the application specified by `app_name` (string).
+  Example:
+  >
+    :lua require("Openner").open_single_app("Firefox")
+  <
+
+==============================================================================
+ vim:tw=78:ts=8:sw=2:sts=2:et:ft=help:norl:

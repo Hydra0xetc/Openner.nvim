@@ -67,15 +67,10 @@ function M.setup(user_config)
 		config = vim.tbl_deep_extend("force", config, user_config)
 	end
 
-	-- FIXME: don't know why this is not work, this should be able to make
-	-- if activated is not mentioned AKA nil it will be true
-	if user_config then
-		if user_config.application then
-			for _, app_config in ipairs(user_config.application) do
-				if app_config.activated == nil then
-					app_config.activated = true
-				end
-			end
+	-- Set activated to true by default for all applications
+	for _, app_config in pairs(config.applications) do
+		if app_config.activated == nil then
+			app_config.activated = true
 		end
 	end
 
@@ -219,6 +214,48 @@ function M.select_application()
 	else
 		vim.notify("Invalid selection", vim.log.levels.ERROR)
 	end
+end
+
+function M.open_single_app(app_to_find)
+	local app_config
+	local app_key_found
+
+	for key, app in pairs(config.applications) do
+		if key == app_to_find or (app.name and app.name == app_to_find) then
+			app_config = app
+			app_key_found = key
+			break
+		end
+	end
+
+	if not app_config then
+		vim.notify("Application not found: " .. app_to_find, vim.log.levels.ERROR)
+		return
+	end
+
+	local app_name = app_config.name or app_key_found
+
+	if app_config.activated == false then
+		vim.notify("Application is not active: " .. app_name, vim.log.levels.WARN)
+		return
+	end
+
+	local command_parts = app_config.command or config.default_command
+	local command_to_run = table.concat(command_parts, " ") .. " " .. app_config.activity
+
+	vim.notify("Opening: " .. app_name, vim.log.levels.INFO)
+
+	local job_opts = {
+		on_exit = function(_, exit_code)
+			if exit_code == 0 then
+				vim.notify("Successfully opened: " .. app_name, vim.log.levels.INFO)
+			else
+				vim.notify("Failed to open: " .. app_name, vim.log.levels.ERROR)
+			end
+		end,
+	}
+
+	vim.fn.jobstart(command_to_run, job_opts)
 end
 
 return M
