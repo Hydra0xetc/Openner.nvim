@@ -1,5 +1,15 @@
 local M = {}
 
+local config = {
+	window = {
+		width = 50,
+		height = 10,
+		border = "rounded",
+		title = "Applications",
+		title_pos = "center",
+	},
+}
+
 local function get_plugin_path()
 	local paths = {
 		-- lazy.nvim
@@ -24,6 +34,45 @@ local function get_plugin_path()
 	return nil
 end
 
+function M.validate_config()
+	-- validate window dimensions
+	if config.window.width <= 0 then
+		vim.notify("Window width must be positive", vim.log.levels.WARN)
+		config.window.width = 50
+	end
+
+	if config.window.height <= 0 then
+		vim.notify("Window height must be positive", vim.log.levels.WARN)
+		config.window.height = 10
+	end
+
+	-- validate border style
+	local valid_borders = { "none", "rounded", "single", "double", "shadow", "solid" }
+	local valid_border = false
+
+	for _, border in ipairs(valid_borders) do
+		if config.window.border == border then
+			valid_border = true
+			break
+		end
+	end
+
+	if not valid_border then
+		vim.notify("Invalid border style", vim.log.levels.WARN)
+		config.window.border = "rounded"
+	end
+end
+
+function M.setup(user_config)
+	-- Safe merge with error handling
+	if user_config then
+		config = vim.tbl_deep_extend("force", config, user_config)
+	end
+
+	-- validate config
+	M.validate_config()
+end
+
 function M.open()
 	local applications = {}
 	local plugin_path = get_plugin_path()
@@ -33,7 +82,6 @@ function M.open()
 		return
 	end
 
-	-- Path ke direktori aplikasi
 	local apps_path = plugin_path .. "lua/Openner/application/"
 
 	-- validate path exists
@@ -65,8 +113,8 @@ function M.open()
 	local buf = vim.api.nvim_create_buf(false, true)
 	vim.api.nvim_buf_set_lines(buf, 0, -1, false, lines)
 
-	local width = 50
-	local height = #lines
+	local width = config.window.width
+	local height = math.min(config.window.height, #lines) -- Don't exceed available lines
 	local top = math.floor(((vim.o.lines - height) / 2) - 1)
 	local left = math.floor((vim.o.columns - width) / 2)
 
@@ -77,9 +125,9 @@ function M.open()
 		row = top,
 		col = left,
 		style = "minimal",
-		border = "rounded",
-		title = "Applications",
-		title_pos = "center",
+		border = config.window.border,
+		title = config.window.title,
+		title_pos = config.window.title_pos,
 	})
 
 	local keymaps = {
