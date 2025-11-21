@@ -47,8 +47,7 @@ require("Openner").setup({
 })
 ```
 
-## Adding aplication
-
 > [!IMPORTANT]
 > This is not a perfect plugin maybe its not work
-> 
+> in other phone, whether it's because the activity 
+> is different or because Android is now getting stricter
