@@ -19,7 +19,7 @@ return {
 use "Hydra0xetc/Openner.nvim"
 ```
 
-usage `:Openner`
+**usage** `:Openner`
 
 ## Configuration
 
@@ -46,6 +46,17 @@ require("Openner").setup({
     },
 })
 ```
+
+## Contribution
+just create a PR and i will review it
+
+to adding app see [adding app](./docs/adding_app.md)
+
+## App that have been setup
+- Firefox
+- DeepSeek
+- Instagram
+- YouTube
 
 > [!IMPORTANT]
 > This is not a perfect plugin maybe its not work

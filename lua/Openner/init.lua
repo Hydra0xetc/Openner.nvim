@@ -67,7 +67,8 @@ function M.setup(user_config)
 		config = vim.tbl_deep_extend("force", config, user_config)
 	end
 
-	-- FIXME: don't know why this is not work
+	-- FIXME: don't know why this is not work, this should be able to make
+	-- if activated is not mentioned AKA nil it will be true
 	if user_config then
 		if user_config.application then
 			for _, app_config in ipairs(user_config.application) do
