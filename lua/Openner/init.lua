@@ -67,6 +67,7 @@ function M.setup(user_config)
 		config = vim.tbl_deep_extend("force", config, user_config)
 	end
 
+	-- FIXME: don't know why this is not work
 	if user_config then
 		if user_config.application then
 			for _, app_config in ipairs(user_config.application) do
@@ -150,6 +151,24 @@ function M.open()
 
 	-- Set current window
 	vim.api.nvim_set_current_win(win)
+
+	-- Set cursor to always be on the number part
+	vim.api.nvim_create_autocmd({ "CursorMoved", "CursorMovedI" }, {
+		buffer = buf,
+		callback = function()
+			local cursor_pos = vim.api.nvim_win_get_cursor(win)
+
+			-- If cursor is not on the number part, move it to the number
+			local current_col = cursor_pos[2]
+			if current_col < 1 or current_col > 3 then -- [1] is 3 characters
+				-- Move cursor to position after opening bracket '['
+				vim.api.nvim_win_set_cursor(win, { cursor_pos[1], 1 })
+			end
+		end,
+	})
+
+	-- Set initial cursor position to first number
+	vim.api.nvim_win_set_cursor(win, { 1, 1 })
 
 	-- Trigger autocommand
 	vim.api.nvim_exec_autocmds("User", { pattern = "OpennerOpened" })
