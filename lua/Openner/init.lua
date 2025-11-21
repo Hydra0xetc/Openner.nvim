@@ -1,33 +1,59 @@
 local M = {}
 
 local function get_plugin_path()
-	local lazypath = vim.fn.stdpath("data") .. "/lazy/openner/"
-	if vim.fn.isdirectory(lazypath) == 1 then
-		return lazypath
+	local paths = {
+		-- lazy.nvim
+		vim.fn.stdpath("data") .. "/lazy/Openner/",
+		-- packer.nvim
+		vim.fn.stdpath("data") .. "/site/pack/packer/start/Openner/",
+		vim.fn.stdpath("data") .. "/site/pack/packer/opt/Openner/",
+	}
+
+	for _, path in ipairs(paths) do
+		if vim.fn.isdirectory(path) == 1 then
+			return path
+		end
 	end
+
+	for path in vim.gsplit(vim.o.runtimepath, ",", {}) do
+		if vim.fn.matchstr(path, "openner") ~= "" then
+			return path
+		end
+	end
+
+	return nil
 end
 
 function M.open()
 	local applications = {}
-	local path = get_plugin_path()
+	local plugin_path = get_plugin_path()
 
-	-- validate path exists
-	if vim.fn.isdirectory(path) == 0 then
+	if not plugin_path then
+		vim.notify("Could not find openner plugin path", vim.log.levels.ERROR)
 		return
 	end
 
-	local files = vim.fn.readdir(path)
+	-- Path ke direktori aplikasi
+	local apps_path = plugin_path .. "lua/Openner/application/"
+
+	-- validate path exists
+	if vim.fn.isdirectory(apps_path) == 0 then
+		vim.notify("Applications directory not found: " .. apps_path, vim.log.levels.WARN)
+		return
+	end
+
+	local files = vim.fn.readdir(apps_path)
 	for _, file in ipairs(files) do
 		if file ~= "." and file ~= ".." then
 			table.insert(applications, {
 				name = file,
-				path = path .. file,
+				path = apps_path .. file,
 			})
 		end
 	end
 
 	if #applications == 0 then
-		vim.notify("No applications found in " .. path, vim.log.levels.WARN)
+		vim.notify("No applications found in " .. apps_path, vim.log.levels.WARN)
 		return
 	end
 
@@ -56,7 +82,6 @@ function M.open()
 		title_pos = "center",
 	})
 
-	-- Key mappings
 	local keymaps = {
 		{ "n", "q", "<Cmd>close<CR>", { noremap = true, silent = true } },
 		{ "n", "<Esc>", "<Cmd>close<CR>", { noremap = true, silent = true } },
