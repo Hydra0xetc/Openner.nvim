@@ -10,21 +10,25 @@ local config = {
 	},
 	default_command = { "am", "start", "--user", "0", "-n" },
 	applications = {
-		{
+		Deepseek = {
 			name = "DeepSeek",
 			activity = "com.deepseek.chat/.MainActivity",
+			activated = true,
 		},
-		{
+		Firefox = {
 			name = "FireFox",
 			activity = "org.mozilla.firefox/.App",
+			activated = true,
 		},
-		{
+		Instagram = {
 			name = "Instagram",
 			activity = "com.instagram.android/.activity.MainTabActivity",
+			activated = true,
 		},
-		{
+		Youtube = {
 			name = "YouTube",
 			activity = "com.google.android.youtube/.HomeActivity",
+			activated = true,
 		},
 	},
 }
@@ -60,14 +64,17 @@ end
 
 function M.setup(user_config)
 	if user_config then
-		-- Manually merge the applications table
-		if user_config.applications then
-			for _, app in ipairs(user_config.applications) do
-				table.insert(config.applications, app)
-			end
-			user_config.applications = nil -- Prevent overwrite by tbl_deep_extend
-		end
 		config = vim.tbl_deep_extend("force", config, user_config)
+	end
+
+	if user_config then
+		if user_config.application then
+			for _, app_config in ipairs(user_config.application) do
+				if app_config.activated == nil then
+					app_config.activated = true
+				end
+			end
+		end
 	end
 
 	-- validate config
@@ -75,16 +82,27 @@ function M.setup(user_config)
 end
 
 function M.open()
-	local applications = config.applications
+	local active_applications = {}
+	for name, app_config in pairs(config.applications) do
+		if app_config.activated then
+			app_config.name = app_config.name or name
+			table.insert(active_applications, app_config)
+		end
+	end
 
-	if #applications == 0 then
-		vim.notify("No applications found in config", vim.log.levels.WARN)
+	if #active_applications == 0 then
+		vim.notify("No active applications found in config", vim.log.levels.WARN)
 		return
 	end
 
+	-- Sort applications by name for consistent ordering
+	table.sort(active_applications, function(a, b)
+		return a.name < b.name
+	end)
+
 	local lines = {}
-	for i, app in ipairs(applications) do
-		table.insert(lines, string.format("%d: %s", i, app.name))
+	for i, app in ipairs(active_applications) do
+		table.insert(lines, string.format("[%d] %s", i, app.name))
 	end
 
 	local buf = vim.api.nvim_create_buf(false, true)
@@ -121,11 +139,11 @@ function M.open()
 	vim.api.nvim_buf_set_option(buf, "buftype", "nofile")
 	vim.api.nvim_buf_set_option(buf, "bufhidden", "wipe")
 	vim.api.nvim_buf_set_option(buf, "modifiable", false)
-	vim.api.nvim_buf_set_option(buf, "filetype", "opener")
+	vim.api.nvim_buf_set_option(buf, "filetype", "openner")
 
 	-- Store applications data in buffer variables
-	vim.api.nvim_buf_set_var(buf, "opener_applications", applications)
-	vim.api.nvim_buf_set_var(buf, "opener_win_id", win)
+	vim.api.nvim_buf_set_var(buf, "openner_applications", active_applications)
+	vim.api.nvim_buf_set_var(buf, "openner_win_id", win)
 
 	-- Syntax highlighting
 	vim.api.nvim_buf_add_highlight(buf, -1, "Number", 0, 0, 2)
@@ -134,7 +152,7 @@ function M.open()
 	vim.api.nvim_set_current_win(win)
 
 	-- Trigger autocommand
-	vim.api.nvim_exec_autocmds("User", { pattern = "OpenerOpened" })
+	vim.api.nvim_exec_autocmds("User", { pattern = "OpennerOpened" })
 end
 
 -- Function to handle application selection
@@ -143,7 +161,7 @@ function M.select_application()
 	local win = vim.api.nvim_get_current_win()
 
 	-- Check if buffer has applications data
-	local success, applications = pcall(vim.api.nvim_buf_get_var, buf, "opener_applications")
+	local success, applications = pcall(vim.api.nvim_buf_get_var, buf, "openner_applications")
 	if not success then
 		vim.notify("No applications data found", vim.log.levels.ERROR)
 		return
@@ -157,7 +175,7 @@ function M.select_application()
 		return
 	end
 
-	local index = tonumber(string.match(line, "(%d+):"))
+	local index = tonumber(string.match(line, "%[(%d+)%]"))
 	if index and applications[index] then
 		local app = applications[index]
 		local command_parts = app.command or config.default_command
