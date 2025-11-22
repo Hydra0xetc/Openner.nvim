@@ -6,5 +6,5 @@ vim.api.nvim_create_autocmd("FileType", {
 })
 
 vim.api.nvim_create_user_command("Openner", function()
-	require("Openner").open()
+	require("openner").open()
 end, {})
