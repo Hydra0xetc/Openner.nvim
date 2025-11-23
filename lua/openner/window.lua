@@ -121,7 +121,7 @@ function M.select_application()
 	if index and applications[index] then
 		local app = applications[index]
 		local command_parts = app.command or default_command
-		local command_to_run = table.concat(command_parts, " ") .. " " .. app.activity
+		local command_to_run = table.concat(command_parts, " ") .. " " .. vim.fn.shellescape(app.activity)
 
 		vim.notify("Opening: " .. app.name, vim.log.levels.INFO)
 
