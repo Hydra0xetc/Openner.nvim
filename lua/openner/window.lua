@@ -1,3 +1,4 @@
+---@diagnostic disable: deprecated
 local M = {}
 
 function M.create_floating_window(applications, window_config, default_command)
@@ -33,7 +34,6 @@ function M.create_floating_window(applications, window_config, default_command)
 
 	M.setup_buffer_keymaps(buf)
 	M.setup_buffer_options(buf)
-	M.setup_buffer_highlights(buf)
 	M.setup_cursor_management(buf, win)
 
 	-- Store applications data in buffer variables
@@ -69,11 +69,6 @@ function M.setup_buffer_options(buf)
 	vim.api.nvim_buf_set_option(buf, "bufhidden", "wipe")
 	vim.api.nvim_buf_set_option(buf, "modifiable", false)
 	vim.api.nvim_buf_set_option(buf, "filetype", "openner")
-end
-
-function M.setup_buffer_highlights(buf)
-	-- Syntax highlighting
-	vim.api.nvim_buf_add_highlight(buf, -1, "Number", 0, 0, 2)
 end
 
 function M.setup_cursor_management(buf, win)

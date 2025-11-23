@@ -65,9 +65,11 @@ end
 
 function M.setup(user_config)
 	if user_config then
+		---@diagnostic disable-next-line: assign-type-mismatch
 		config = vim.tbl_deep_extend("force", config, user_config)
 	end
 
+	---@diagnostic disable-next-line: param-type-mismatch
 	-- Set activated to true by default for all applications
 	for _, app_config in pairs(config.applications) do
 		if app_config.activated == nil then
