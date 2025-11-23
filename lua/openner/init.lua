@@ -125,7 +125,7 @@ function M.open_single_app(app_to_find)
 	end
 
 	local command_parts = app_config.command or config.default_command
-	local command_to_run = table.concat(command_parts, " ") .. " " .. app_config.activity
+	local command_to_run = table.concat(command_parts, " ") .. " " .. vim.fn.shellescape(app_config.activity)
 
 	vim.notify("Opening: " .. app_name, vim.log.levels.INFO)
 
