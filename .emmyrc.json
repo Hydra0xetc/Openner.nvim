@@ -18,6 +18,11 @@
     "ignoreGlobs": [
       "**/*_spec.lua"
     ],
+    "ignoreDir": [
+      "node_modules",
+      ".git",
+      "dist"
+    ],
     "library": [
       "$VIMRUNTIME",
       "$LLS_Addons/luvit",
