@@ -1,6 +1,20 @@
 ---@diagnostic disable: deprecated
 local M = {}
 
+--- Creates a floating window to display and select from a list of applications
+---
+--- This function creates a floating window that displays a sorted list of applications
+--- with numeric indices. Users can select an application by pressing Enter on the
+--- corresponding number.
+---
+---@param applications table A table of application objects with `name`, `activity`, and optional `command` fields
+---@param window_config table Configuration for the floating window with fields:
+---                          - `width` (number): Window width
+---                          - `height` (number): Window height
+---                          - `border` (string): Window border style
+---                          - `title` (string): Window title
+---                          - `title_pos` (string): Title position
+---@param default_command table Default command parts to use if application doesn't specify its own command
 function M.create_floating_window(applications, window_config, default_command)
 	-- Sort applications by name for consistent ordering
 	table.sort(applications, function(a, b)
@@ -51,6 +65,13 @@ function M.create_floating_window(applications, window_config, default_command)
 	vim.api.nvim_exec_autocmds("User", { pattern = "OpennerOpened" })
 end
 
+--- Sets up keymaps for navigating the floating window
+---
+--- Available keymaps:
+--- - `q` or `<Esc>`: Close the window
+--- - `<CR>`: Select the current application
+---
+---@param buf integer Buffer handle to set keymaps on
 function M.setup_buffer_keymaps(buf)
 	local keymaps = {
 		{ "n", "q", "<Cmd>close<CR>", { noremap = true, silent = true } },
@@ -63,14 +84,30 @@ function M.setup_buffer_keymaps(buf)
 	end
 end
 
+--- Configures buffer options for the floating window
+---
+--- Sets the buffer to:
+--- - `buftype = "nofile"`: Temporary buffer
+--- - `bufhidden = "wipe"`: Auto-wipe when hidden
+--- - `modifiable = false`: Read-only buffer
+--- - `filetype = "openner"`: Custom filetype
+---
+---@param buf integer Buffer handle to configure
 function M.setup_buffer_options(buf)
 	-- Buffer options
-	vim.api.nvim_buf_set_option(buf, "buftype", "nofile")
-	vim.api.nvim_buf_set_option(buf, "bufhidden", "wipe")
-	vim.api.nvim_buf_set_option(buf, "modifiable", false)
-	vim.api.nvim_buf_set_option(buf, "filetype", "openner")
+	vim.api.nvim_buf_set_option(buf, "buftype", "nofile") -- buffer for temporary purposes
+	vim.api.nvim_buf_set_option(buf, "bufhidden", "wipe") -- buffer will automatically wiped when its not used
+	vim.api.nvim_buf_set_option(buf, "modifiable", false) -- buffer non modifiable
+	vim.api.nvim_buf_set_option(buf, "filetype", "openner") -- filetype for the buffer
 end
 
+--- Manages cursor positioning within the floating window
+---
+--- Ensures the cursor always stays on the number part of the selection
+--- by automatically repositioning it if it moves away.
+---
+---@param buf integer Buffer handle to attach autocmds to
+---@param win integer Window handle for cursor management
 function M.setup_cursor_management(buf, win)
 	-- Set cursor to always be on the number part
 	vim.api.nvim_create_autocmd({ "CursorMoved", "CursorMovedI" }, {
@@ -87,6 +124,17 @@ function M.setup_cursor_management(buf, win)
 	})
 end
 
+--- Selects and launches the currently highlighted application
+---
+--- Reads the application data from buffer variables, constructs the appropriate
+--- command using either the application-specific command or default command,
+--- and launches the application as a job.
+---
+--- Displays notifications for:
+--- - Success/failure of application launch
+--- - Errors for invalid selections or missing data
+---
+---@usage Called automatically when pressing `<CR>` in the floating window
 function M.select_application()
 	local buf = vim.api.nvim_get_current_buf()
 	local win = vim.api.nvim_get_current_win()

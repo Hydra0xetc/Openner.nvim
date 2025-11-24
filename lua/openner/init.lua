@@ -1,6 +1,7 @@
 local M = {}
 local window = require("openner.window")
 
+--- Default configuration for the Openner plugin
 local config = {
 	window = {
 		width = 50,
@@ -34,6 +35,12 @@ local config = {
 	},
 }
 
+--- Validates the user configuration for correctness
+---
+--- Checks:
+--- - Window dimensions are positive numbers
+--- - Border style is valid
+--- - Sets defaults for invalid values
 function M.validate_config()
 	-- validate window dimensions
 	if config.window.width <= 0 then
@@ -63,6 +70,15 @@ function M.validate_config()
 	end
 end
 
+--- Sets up the Openner plugin with user configuration
+---
+--- Merges user configuration with defaults and validates the result.
+--- Sets `activated = true` by default for all applications if not specified.
+---
+---@param user_config? table User configuration to merge with defaults
+---                         - `window`: Window configuration
+---                         - `default_command`: Default command parts
+---                         - `applications`: Table of application configurations
 function M.setup(user_config)
 	if user_config then
 		---@diagnostic disable-next-line: assign-type-mismatch
@@ -81,6 +97,10 @@ function M.setup(user_config)
 	M.validate_config()
 end
 
+--- Opens the application selection floating window
+---
+--- Collects all activated applications and displays them in a floating window
+--- for user selection. Shows a warning if no active applications are found.
 function M.open()
 	local active_applications = {}
 	for name, app_config in pairs(config.applications) do
@@ -98,10 +118,22 @@ function M.open()
 	window.create_floating_window(active_applications, config.window, config.default_command)
 end
 
+--- Selects the currently highlighted application in the floating window
+---
+--- This function is called when the user presses `<CR>` in the floating window.
+--- It delegates to the window module's selection logic.
+---
+---@usage Called automatically from the floating window keymaps
 function M.select_application()
 	window.select_application()
 end
 
+--- Opens a single application directly without showing the selection window
+---
+--- Useful for binding specific applications to keymaps or commands.
+--- The application can be identified by its configuration key or name.
+---
+---@param app_to_find string The application key or name to open
 function M.open_single_app(app_to_find)
 	local app_config
 	local app_key_found

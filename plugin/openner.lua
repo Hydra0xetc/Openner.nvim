@@ -1,3 +1,4 @@
+-- highlight cursor
 vim.api.nvim_create_autocmd("FileType", {
 	pattern = "openner",
 	callback = function()
