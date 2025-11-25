@@ -21,11 +21,11 @@
     "ignoreDir": [
       "node_modules",
       ".git",
-      "dist"
+      "dist",
+      "target"
     ],
     "library": [
       "$VIMRUNTIME",
-      "$LLS_Addons/luvit",
       "$HOME/.local/share/nvim/lazy"
     ]
   }
