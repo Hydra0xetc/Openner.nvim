@@ -1,20 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
-    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />
-
     <application
-        android:label="Launcher Explorer"
-        android:requestLegacyExternalStorage="true"
-        android:theme="@style/Theme.AppCompat.NoActionBar">
-
+        android:allowBackup="true"
+        android:label="@string/app_name"
+        android:theme="@style/Theme.AppCompat.Light">
+        
         <activity
             android:name=".MainActivity"
             android:exported="true">
-            <intent-filter>
-                <action android:name="android.intent.action.MAIN"/>
-                <category android:name="android.intent.category.LAUNCHER"/>
-            </intent-filter>
+            <!-- <intent-filter> -->
+            <!--     <action android:name="android.intent.action.MAIN" /> -->
+            <!--     <category android:name="android.intent.category.LAUNCHER" /> -->
+            <!-- </intent-filter> -->
         </activity>
 
+        <receiver
+            android:name=".ScanAndSaveReceiver"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="com.activity.lister.ACTION_SCAN_AND_SAVE" />
+            </intent-filter>
+        </receiver>
     </application>
+
 </manifest>

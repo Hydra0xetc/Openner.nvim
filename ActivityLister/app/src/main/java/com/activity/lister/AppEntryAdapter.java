@@ -7,9 +7,11 @@ import com.google.gson.stream.JsonWriter;
 
 import java.io.IOException;
 
-public class AppEntryAdapter extends TypeAdapter<AppEntry> {
+public class AppEntryAdapter extends TypeAdapter<AppEntry>
+{
     @Override
-    public void write(JsonWriter out, AppEntry appEntry) throws IOException {
+    public void write(JsonWriter out, AppEntry appEntry) throws IOException
+    {
         out.beginObject();
         out.name("appName").value(appEntry.appName);
         out.name("packageName").value(appEntry.packageName);
@@ -20,7 +22,8 @@ public class AppEntryAdapter extends TypeAdapter<AppEntry> {
     }
 
     @Override
-    public AppEntry read(JsonReader in) throws IOException {
+    public AppEntry read(JsonReader in) throws IOException
+    {
         // Implement if you need to deserialize JSON back to AppEntry
         // For this task, we only need serialization, so this can be left unimplemented
         // or throw an UnsupportedOperationException

@@ -186,4 +186,94 @@ function M.select_application()
 	end
 end
 
+--- Creates a floating window for managing application activation states.
+---
+--- This function displays all applications, indicating their activation status,
+--- and allows the user to toggle the status of selected applications.
+---
+---@param applications table A table of all application objects (from config.applications)
+---@param window_config table Configuration for the floating window
+function M.create_management_window(applications, window_config)
+    -- Sort applications by name for consistent ordering
+    local sorted_apps = {}
+    for _, app in pairs(applications) do
+        table.insert(sorted_apps, app)
+    end
+    table.sort(sorted_apps, function(a, b)
+        return a.name < b.name
+    end)
+
+    local lines = {}
+    for i, app in ipairs(sorted_apps) do
+        local status_icon = app.activated and "✓" or "✗"
+        table.insert(lines, string.format("[%s] %s", status_icon, app.name))
+    end
+
+    local buf = vim.api.nvim_create_buf(false, true)
+    vim.api.nvim_buf_set_lines(buf, 0, -1, false, lines)
+
+    local width = window_config.width
+    local height = math.min(window_config.height, #lines)
+    local top = math.floor(((vim.o.lines - height) / 2) - 1)
+    local left = math.floor((vim.o.columns - width) / 2)
+
+    local win = vim.api.nvim_open_win(buf, true, {
+        relative = "editor",
+        width = width,
+        height = height,
+        row = top,
+        col = left,
+        style = "minimal",
+        border = window_config.border,
+        title = "Manage " .. window_config.title,
+        title_pos = window_config.title_pos,
+    })
+
+    -- Setup keymaps for the management window
+    local manage_keymaps = {
+        { "n", "q", "<Cmd>close<CR>", { noremap = true, silent = true } },
+        { "n", "<Esc>", "<Cmd>close<CR>", { noremap = true, silent = true } },
+        { "n", require("openner").get_config().manage_toggle_key, "<Cmd>lua require('openner.window').toggle_selected_app_status()<CR>", { noremap = true, silent = true } },
+    }
+
+    for _, map in ipairs(manage_keymaps) do
+        vim.api.nvim_buf_set_keymap(buf, map[1], map[2], map[3], map[4])
+    end
+
+    -- Use existing buffer options and cursor management
+    M.setup_buffer_options(buf)
+    M.setup_cursor_management(buf, win)
+
+    -- Store applications data in buffer variables
+    vim.api.nvim_buf_set_var(buf, "openner_sorted_apps", sorted_apps)
+    vim.api.nvim_buf_set_var(buf, "openner_win_id", win)
+
+    -- Set current window
+    vim.api.nvim_set_current_win(win)
+    vim.api.nvim_win_set_cursor(win, { 1, 1 })
+
+    vim.api.nvim_exec_autocmds("User", { pattern = "OpennerManageOpened" })
+end
+
+--- Toggles the activation status of the app under the cursor in the management window.
+function M.toggle_selected_app_status()
+    local buf = vim.api.nvim_get_current_buf()
+    local win = vim.api.nvim_get_current_win()
+
+    local sorted_apps = vim.api.nvim_buf_get_var(buf, "openner_sorted_apps")
+    local line_num = vim.api.nvim_win_get_cursor(win)[1]
+    local app_entry = sorted_apps[line_num]
+
+    if app_entry and app_entry.name then
+        local new_status = require("openner").toggle_app_activation(app_entry.name)
+        local status_icon = new_status and "✓" or "✗"
+
+        -- Update the displayed line
+        local new_line = string.format("[%s] %s", status_icon, app_entry.name)
+        vim.api.nvim_buf_set_option(buf, "modifiable", true)
+        vim.api.nvim_buf_set_lines(buf, line_num - 1, line_num, false, { new_line })
+        vim.api.nvim_buf_set_option(buf, "modifiable", false)
+    end
+end
+
 return M

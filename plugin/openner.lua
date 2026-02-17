@@ -7,5 +7,13 @@ vim.api.nvim_create_autocmd("FileType", {
 })
 
 vim.api.nvim_create_user_command("Openner", function()
-	require("openner").open()
+    require("openner").open()
+end, {})
+
+vim.api.nvim_create_user_command("OpennerScan", function()
+    require("openner").scan()
+end, {})
+
+vim.api.nvim_create_user_command("OpennerUninstall", function()
+    require("openner").uninstall()
 end, {})

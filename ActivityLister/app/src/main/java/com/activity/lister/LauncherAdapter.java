@@ -8,22 +8,23 @@ import android.view.ViewGroup;
 import android.widget.LinearLayout;
 import android.widget.TextView;
 import android.widget.Toast;
-
 import androidx.recyclerview.widget.RecyclerView;
-
 import java.util.Collection;
 
-public class LauncherAdapter extends RecyclerView.Adapter<LauncherAdapter.VH> {
+public class LauncherAdapter extends RecyclerView.Adapter<LauncherAdapter.VH>
+{
 
     private final Context context;
     private final AppEntry[] data;
 
-    public LauncherAdapter(Context c, Collection<AppEntry> list) {
+    public LauncherAdapter(Context c, Collection<AppEntry> list)
+    {
         context = c;
         data = list.toArray(new AppEntry[0]);
     }
 
-    static class VH extends RecyclerView.ViewHolder {
+    static class VH extends RecyclerView.ViewHolder
+    {
         TextView pkg;
         TextView appName;
         LinearLayout container;
@@ -37,14 +38,16 @@ public class LauncherAdapter extends RecyclerView.Adapter<LauncherAdapter.VH> {
     }
 
     @Override
-    public VH onCreateViewHolder(ViewGroup parent, int viewType) {
+    public VH onCreateViewHolder(ViewGroup parent, int viewType)
+    {
         View v = LayoutInflater.from(context)
                 .inflate(R.layout.item_app, parent, false);
         return new VH(v);
     }
 
     @Override
-    public void onBindViewHolder(VH h, int pos) {
+    public void onBindViewHolder(VH h, int pos)
+    {
         AppEntry app = data[pos];
         h.pkg.setText(app.packageName);
         h.appName.setText(app.appName);
@@ -74,7 +77,8 @@ public class LauncherAdapter extends RecyclerView.Adapter<LauncherAdapter.VH> {
     }
 
     @Override
-    public int getItemCount() {
+    public int getItemCount()
+    {
         return data.length;
     }
 }

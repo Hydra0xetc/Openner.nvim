@@ -1,9 +1,0 @@
-[
-  {
-    "appName": "Kamera",
-    "packageName": "com.android.camera",
-    "activities": [
-      "com.android.camera.Camera"
-    ]
-  }
-]
