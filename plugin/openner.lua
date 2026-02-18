@@ -17,3 +17,7 @@ end, {})
 vim.api.nvim_create_user_command("OpennerUninstall", function()
     require("openner").uninstall()
 end, {})
+
+vim.api.nvim_create_user_command("OpennerInstall", function()
+    require("openner").install()
+end, {})
