@@ -1,13 +1,52 @@
+---@diagnostic disable: deprecated
 local M = {}
 
--- Default configuration
+APK_PATH = "/data/data/com.termux/files/usr/tmp/ActivityLister.apk"
+APK_URL = "https://github.com/Hydra0xetc/Openner.nvim/releases/download/1.0.0/ActivityLister.apk"
+PACKAGE = "com.activity.lister"
+
 local config = {
-    window = { width = 50, height = 10, border = "rounded" },
+    window = {
+        width = 50,
+        height = 10,
+        border = "rounded"
+    },
     default_command = { "am", "start", "--user", "0", "-n" },
     applications = {},
 }
 
--- Setup plugin
+local function notify(msg, level)
+    vim.notify("[Openner] " .. msg, level)
+end
+
+local function is_app_installed()
+    local result = vim.fn.system("/system/bin/pm list packages " .. PACKAGE)
+    return result:match(PACKAGE) ~= nil
+end
+
+local function do_open_installer()
+    notify("Opening ActivityLister installer...", vim.log.levels.INFO)
+    vim.fn.jobstart("termux-open " .. APK_PATH, {
+        on_exit = function(_, _)
+            notify("Installation done? Run :OpennerScan to continue.", vim.log.levels.WARN)
+        end
+    })
+end
+
+local function do_download()
+    notify("Downloading ActivityLister.apk...", vim.log.levels.INFO)
+    vim.fn.jobstart("wget -O " .. APK_PATH .. " " .. APK_URL, {
+        on_exit = function(_, code)
+            if code == 0 then
+                notify("Download complete!", vim.log.levels.INFO)
+                do_open_installer()
+            else
+                notify("Download failed! Check your internet connection.", vim.log.levels.ERROR)
+            end
+        end
+    })
+end
+
 function M.setup(user_config)
     M.load_applications()
     if user_config then
@@ -15,9 +54,8 @@ function M.setup(user_config)
     end
 end
 
--- Load applications from activities.json
 function M.load_applications()
-    local path = "/sdcard/Android/data/com.activity.lister/files/activities.json"
+    local path = "/sdcard/Android/data/" .. PACKAGE .. "/files/activities.json"
     local file = io.open(path, "r")
     if not file then return end
 
@@ -37,16 +75,55 @@ function M.load_applications()
     end
 end
 
+function M.install()
+    if is_app_installed() then
+        notify("ActivityLister is already installed.", vim.log.levels.INFO)
+        return
+    end
+
+    if vim.fn.filereadable(APK_PATH) == 1 then
+        do_open_installer()
+    else
+        do_download()
+    end
+end
+
+function M.scan()
+    if not is_app_installed() then
+        notify("ActivityLister is not installed. Run :OpennerInstall first.", vim.log.levels.WARN)
+        return
+    end
+
+    notify("Scanning applications...", vim.log.levels.INFO)
+    vim.fn.jobstart(
+        "am broadcast -a " .. PACKAGE .. ".ACTION_SCAN_AND_SAVE -n " .. PACKAGE .. "/.ScanAndSaveReceiver",
+        {
+            on_exit = function(_, code)
+                vim.schedule(function()
+                    if code == 0 then
+                        vim.defer_fn(function()
+                            config.applications = {}
+                            M.load_applications()
+                            notify("Applications loaded!", vim.log.levels.INFO)
+                        end, 1000)
+                    else
+                        notify("Scan failed!", vim.log.levels.ERROR)
+                    end
+                end)
+            end
+        }
+    )
+end
+
 function M.open()
     local apps = {}
     for _, app in pairs(config.applications) do
         table.insert(apps, app)
     end
-    
     table.sort(apps, function(a, b) return a.name < b.name end)
 
     if #apps == 0 then
-        vim.notify("found 0 applications", vim.log.levels.WARN)
+        notify("No applications found. Run :OpennerScan first.", vim.log.levels.WARN)
         return
     end
 
@@ -71,7 +148,7 @@ function M.open()
 
     vim.api.nvim_buf_set_option(buf, "buftype", "nofile")
     vim.api.nvim_buf_set_option(buf, "modifiable", false)
-    
+    vim.api.nvim_buf_set_option(buf, "filetype", "openner")
     vim.api.nvim_buf_set_var(buf, "apps", apps)
 
     vim.api.nvim_buf_set_keymap(buf, "n", "q", "<Cmd>close<CR>", { noremap = true })
@@ -80,35 +157,127 @@ function M.open()
         noremap = true,
         callback = function()
             local line = vim.api.nvim_win_get_cursor(0)[1]
-            local idx = tonumber(string.match(vim.api.nvim_buf_get_lines(buf, line-1, line, false)[1], "%[(%d+)%]"))
+            local idx = tonumber(string.match(
+                vim.api.nvim_buf_get_lines(buf, line - 1, line, false)[1], "%[(%d+)%]"
+            ))
             if idx and apps[idx] then
                 local app = apps[idx]
-                local cmd = table.concat(config.default_command, " ") .. " " .. vim.fn.shellescape(app.activity)
-                vim.fn.jobstart(cmd)
+                local command_parts = app.command or config.default_command
+                local cmd = table.concat(command_parts, " ") .. " " .. vim.fn.shellescape(app.activity)
+                
+                notify("Opening: " .. app.name, vim.log.levels.INFO)
+                
+                local stdout_data = {}
+                local stderr_data = {}
+                
+                vim.fn.jobstart(cmd, {
+                    stdout_buffered = true,
+                    stderr_buffered = true,
+                    on_stdout = function(_, data)
+                        if data then
+                            vim.list_extend(stdout_data, data)
+                        end
+                    end,
+                    on_stderr = function(_, data)
+                        if data then
+                            vim.list_extend(stderr_data, data)
+                        end
+                    end,
+                    on_exit = function(_, exit_code)
+                        vim.schedule(function()
+                            if exit_code == 0 then
+                                notify("Successfully opened: " .. app.name, vim.log.levels.INFO)
+                            else
+                                local error_msg = "Failed to open: " .. app.name
+                                if #stderr_data > 0 then
+                                    local stderr_str = table.concat(stderr_data, "\n")
+                                    if stderr_str ~= "" then
+                                        error_msg = error_msg .. "\nError: " .. stderr_str
+                                    end
+                                end
+                                notify(error_msg, vim.log.levels.ERROR)
+                            end
+                        end)
+                    end
+                })
+                
                 vim.api.nvim_win_close(win, true)
             end
         end
     })
 end
 
-function M.scan()
-    vim.notify("Scanning applications...", vim.log.levels.INFO)
-    vim.fn.jobstart("am broadcast -a com.activity.lister.ACTION_SCAN_AND_SAVE -n com.activity.lister/.ScanAndSaveReceiver", {
-        on_exit = function(_, code)
-            if code == 0 then
-                vim.defer_fn(function()
-                    config.applications = {}
-                    M.load_applications()
-                    vim.notify("applications has been loaded", vim.log.levels.INFO)
-                end, 1000)
-            end
-        end
-    })
+function M.uninstall()
+    if not is_app_installed() then
+        notify("ActivityLister is not installed.", vim.log.levels.WARN)
+        return
+    end
+    vim.fn.jobstart("am start -a android.intent.action.DELETE -d package:" .. PACKAGE)
 end
 
--- Uninstall helper app
-function M.uninstall()
-    vim.fn.jobstart("am start -a android.intent.action.DELETE -d package:com.activity.lister")
+--- Opens a single application directly without showing the selection window
+---
+--- Useful for binding specific applications to keymaps or commands.
+--- The application can be identified by its configuration key or name.
+---
+---@param app_to_find string The application key or name to open
+function M.open_single_app(app_to_find)
+    local app_config
+    local app_key_found
+
+    for key, app in pairs(config.applications) do
+        if key == app_to_find or (app.name and app.name == app_to_find) then
+            app_config = app
+            app_key_found = key
+            break
+        end
+    end
+
+    if not app_config then
+        notify("Application not found: " .. app_to_find, vim.log.levels.ERROR)
+        return
+    end
+
+    local app_name = app_config.name or app_key_found
+
+    local command_parts = app_config.command or config.default_command
+    local command_to_run = table.concat(command_parts, " ") .. " " .. vim.fn.shellescape(app_config.activity)
+
+    notify("Opening: " .. app_name, vim.log.levels.INFO)
+
+    local stdout_data = {}
+    local stderr_data = {}
+
+    vim.fn.jobstart(command_to_run, {
+        stdout_buffered = true,
+        stderr_buffered = true,
+        on_stdout = function(_, data)
+            if data then
+                vim.list_extend(stdout_data, data)
+            end
+        end,
+        on_stderr = function(_, data)
+            if data then
+                vim.list_extend(stderr_data, data)
+            end
+        end,
+        on_exit = function(_, exit_code)
+            vim.schedule(function()
+                if exit_code == 0 then
+                    notify("Successfully opened: " .. app_name, vim.log.levels.INFO)
+                else
+                    local error_msg = "Failed to open: " .. app_name
+                    if #stderr_data > 0 then
+                        local stderr_str = table.concat(stderr_data, "\n")
+                        if stderr_str ~= "" then
+                            error_msg = error_msg .. "\nError: " .. stderr_str
+                        end
+                    end
+                    notify(error_msg, vim.log.levels.ERROR)
+                end
+            end)
+        end
+    })
 end
 
 return M
